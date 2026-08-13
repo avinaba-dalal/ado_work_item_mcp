@@ -1,0 +1,20 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ado_work_item_mcp"
+version = "0.1.0"
+description = "MCP server for reading current-sprint work items and managing their child tasks in Azure DevOps"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp[cli]",
+    "azure-devops",
+    "msrest",
+]
+
+[project.scripts]
+ado_work_item_mcp = "ado_work_item_mcp.server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ado_work_item_mcp"]
