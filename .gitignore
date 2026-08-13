@@ -39,3 +39,6 @@ htmlcov/
 
 # Claude
 .claude/
+
+# Local secrets
+config.json

@@ -6,17 +6,22 @@ mcp = MCPServer("ado_work_item_mcp")
 
 
 @mcp.tool()
-def get_current_sprint() -> dict:
-    """Get the current sprint (iteration) for the configured team: id, name, path, start/finish dates."""
-    return client.get_current_sprint()
+def get_current_sprints(project: str | None = None, team: str | None = None) -> list[dict]:
+    """Get the current sprint(s): id, name, path, start/finish dates.
+
+    Pass both `project` and `team` to get a single configured pair's current
+    sprint. Omit both to get the current sprint for every configured
+    project/team pair (a pair with no active sprint is returned with an
+    `error` field instead of failing the whole call)."""
+    return client.get_current_sprints(project, team)
 
 
 @mcp.tool()
 def list_my_work_items(sprints: list[str] | None = None) -> list[dict]:
-    """List work items assigned to me (PBI, Bug, Tech Debt Item, Spike, SSRD, etc).
+    """List work items assigned to me (PBI, Bug, Tech Debt Item, Spike, SSRD, etc), across all configured projects.
 
     `sprints` is an optional list of sprint iteration paths to filter by (pass
-    multiple to query several sprints at once) — use get_current_sprint()'s
+    multiple to query several sprints at once) — use get_current_sprints()'s
     `path` field to find one. If omitted, returns matching items across all
     sprints, not just the current one."""
     return client.list_my_work_items(sprints)

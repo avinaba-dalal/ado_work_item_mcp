@@ -34,16 +34,22 @@ def _work_item_url(work_item_id: int) -> str:
     return f"{config.ORG_URL}/_apis/wit/workItems/{work_item_id}"
 
 
-def get_current_sprint() -> dict:
-    team_context = TeamContext(project=config.PROJECT, team=config.TEAM)
+def _project_of(work_item_id: int) -> str:
+    item = _wit_client.get_work_item(work_item_id, fields=["System.TeamProject"])
+    return item.fields["System.TeamProject"]
+
+
+def get_current_sprint(project: str, team: str) -> dict:
+    team_context = TeamContext(project=project, team=team)
     iterations = _work_client.get_team_iterations(team_context, timeframe="current")
     if not iterations:
         raise RuntimeError(
-            f"No current sprint configured for team '{config.TEAM}' "
-            f"in project '{config.PROJECT}'."
+            f"No current sprint configured for team '{team}' in project '{project}'."
         )
     iteration = iterations[0]
     return {
+        "project": project,
+        "team": team,
         "id": str(iteration.id),
         "name": iteration.name,
         "path": iteration.path.lstrip("\\"),
@@ -56,14 +62,33 @@ def get_current_sprint() -> dict:
     }
 
 
+def get_current_sprints(project: str | None = None, team: str | None = None) -> list[dict]:
+    if project or team:
+        if not (project and team):
+            raise ValueError("Provide both project and team, or neither to list all configured pairs.")
+        if project not in config.PROJECTS or team not in config.PROJECTS[project]:
+            raise ValueError(f"Team '{team}' is not configured under project '{project}'.")
+        return [get_current_sprint(project, team)]
+
+    sprints = []
+    for p, teams in config.PROJECTS.items():
+        for t in teams:
+            try:
+                sprints.append(get_current_sprint(p, t))
+            except RuntimeError as exc:
+                sprints.append({"project": p, "team": t, "error": str(exc)})
+    return sprints
+
+
 def _wiql_escape(value: str) -> str:
     return value.replace("'", "''")
 
 
 def list_my_work_items(iteration_paths: list[str] | None = None) -> list[dict]:
-    types = ", ".join(f"'{_wiql_escape(t)}'" for t in config.PBI_TYPES)
+    types = ", ".join(f"'{_wiql_escape(t)}'" for t in config.WORK_ITEM_TYPES)
+    projects = ", ".join(f"'{_wiql_escape(p)}'" for p in config.PROJECTS)
     conditions = [
-        f"[System.TeamProject] = '{_wiql_escape(config.PROJECT)}'",
+        f"[System.TeamProject] IN ({projects})",
         f"[System.WorkItemType] IN ({types})",
         "[System.AssignedTo] = @Me",
         "[System.State] <> 'Removed'",
@@ -82,7 +107,8 @@ def list_my_work_items(iteration_paths: list[str] | None = None) -> list[dict]:
     if not ids:
         return []
     items = _wit_client.get_work_items(
-        ids, project=config.PROJECT, fields=["System.Title", "System.State", "System.WorkItemType"]
+        ids,
+        fields=["System.Title", "System.State", "System.WorkItemType", "System.TeamProject"],
     )
     return [
         {
@@ -90,13 +116,14 @@ def list_my_work_items(iteration_paths: list[str] | None = None) -> list[dict]:
             "title": item.fields.get("System.Title"),
             "state": item.fields.get("System.State"),
             "type": item.fields.get("System.WorkItemType"),
+            "project": item.fields.get("System.TeamProject"),
         }
         for item in items
     ]
 
 
 def _child_task_ids(work_item_id: int) -> list[int]:
-    item = _wit_client.get_work_item(work_item_id, project=config.PROJECT, expand="Relations")
+    item = _wit_client.get_work_item(work_item_id, expand="Relations")
     if not item.relations:
         return []
     ids = []
@@ -112,7 +139,6 @@ def list_tasks(work_item_id: int) -> list[dict]:
         return []
     items = _wit_client.get_work_items(
         child_ids,
-        project=config.PROJECT,
         fields=["System.Title", "System.State", "System.WorkItemType"],
     )
     return [
@@ -127,10 +153,11 @@ def list_tasks(work_item_id: int) -> list[dict]:
 
 
 def get_work_item_detail(work_item_id: int) -> dict:
-    item = _wit_client.get_work_item(work_item_id, project=config.PROJECT, expand="Fields")
+    item = _wit_client.get_work_item(work_item_id, expand="Fields")
     fields = item.fields
     return {
         "id": item.id,
+        "project": fields.get("System.TeamProject"),
         "title": fields.get("System.Title"),
         "state": fields.get("System.State"),
         "description": fields.get("System.Description", ""),
@@ -142,21 +169,20 @@ def get_work_item_detail(work_item_id: int) -> dict:
 
 def set_work_item_state(work_item_id: int, state: str) -> dict:
     document = [_patch("add", "/fields/System.State", state)]
-    item = _wit_client.update_work_item(document, work_item_id, project=config.PROJECT)
+    item = _wit_client.update_work_item(document, work_item_id)
     return {"id": item.id, "state": item.fields.get("System.State")}
 
 
 def add_work_item_comment(work_item_id: int, text: str) -> dict:
+    project = _project_of(work_item_id)
     request = CommentCreate(text=text)
-    comment = _wit_client.add_comment(request, config.PROJECT, work_item_id)
+    comment = _wit_client.add_comment(request, project, work_item_id)
     return {"id": comment.id, "text": comment.text}
 
 
 def attach_plan(work_item_id: int, content: str, filename: str = "PLAN.md") -> dict:
     stream = io.BytesIO(content.encode("utf-8"))
-    attachment = _wit_client.create_attachment(
-        upload_stream=stream, project=config.PROJECT, file_name=filename
-    )
+    attachment = _wit_client.create_attachment(upload_stream=stream, file_name=filename)
     document = [
         _patch(
             "add",
@@ -168,13 +194,14 @@ def attach_plan(work_item_id: int, content: str, filename: str = "PLAN.md") -> d
             },
         )
     ]
-    _wit_client.update_work_item(document, work_item_id, project=config.PROJECT)
+    _wit_client.update_work_item(document, work_item_id)
     return {"id": attachment.id, "url": attachment.url, "filename": filename}
 
 
 def create_task(
     work_item_id: int, title: str, description: str = "", effort: float | None = None
 ) -> dict:
+    project = _project_of(work_item_id)
     document = [
         _patch("add", "/fields/System.Title", title),
         _patch(
@@ -187,9 +214,7 @@ def create_task(
         document.append(_patch("add", "/fields/System.Description", description))
     if effort is not None:
         document.append(_patch("add", f"/fields/{config.TASK_EFFORT_FIELD}", effort))
-    item = _wit_client.create_work_item(
-        document, project=config.PROJECT, type=config.TASK_TYPE
-    )
+    item = _wit_client.create_work_item(document, project=project, type=config.TASK_TYPE)
     return {
         "id": item.id,
         "title": item.fields.get("System.Title"),
@@ -217,7 +242,7 @@ def update_task(
         raise ValueError(
             "update_task requires at least one of title/description/state/effort"
         )
-    item = _wit_client.update_work_item(document, task_id, project=config.PROJECT)
+    item = _wit_client.update_work_item(document, task_id)
     return {
         "id": item.id,
         "title": item.fields.get("System.Title"),
@@ -226,5 +251,5 @@ def update_task(
 
 
 def delete_task(task_id: int) -> dict:
-    _wit_client.delete_work_item(task_id, project=config.PROJECT)
+    _wit_client.delete_work_item(task_id)
     return {"id": task_id, "deleted": True}

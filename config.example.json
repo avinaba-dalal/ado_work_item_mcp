@@ -1,0 +1,8 @@
+{
+  "org_url": "https://dev.azure.com/your-org",
+  "pat": "your-personal-access-token",
+  "projects": {
+    "ProjectA": ["TeamA", "TeamB"],
+    "ProjectB": ["TeamC"]
+  }
+}

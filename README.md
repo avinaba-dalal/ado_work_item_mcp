@@ -22,9 +22,9 @@ MCP Client (Claude Code)
 
 | Tool | Description |
 |---|---|
-| `get_current_sprint()` | Current iteration for the configured team: id, name, path, dates |
-| `list_my_work_items(sprints?)` | Work items assigned to you: id, title, state, type. Filters to the given sprint iteration path(s) if supplied, otherwise returns items across all sprints |
-| `get_work_item(work_item_id)` | Title, state, description, acceptance criteria, effort, and child tasks |
+| `get_current_sprints(project?, team?)` | Current iteration(s): id, name, path, dates. Give both `project` and `team` for a single pair, or omit both for every configured pair |
+| `list_my_work_items(sprints?)` | Work items assigned to you across all configured projects: id, title, state, type, project. Filters to the given sprint iteration path(s) if supplied, otherwise returns items across all sprints |
+| `get_work_item(work_item_id)` | Project, title, state, description, acceptance criteria, effort, and child tasks |
 | `set_work_item_state(work_item_id, state)` | Change a work item's state |
 | `add_work_item_comment(work_item_id, text)` | Add a comment to a work item |
 | `attach_plan(work_item_id, content, filename?)` | Attach a markdown plan (default `PLAN.md`) to a work item |
@@ -53,19 +53,31 @@ pip3 install -e .
 
 ## Configuration
 
-All settings are environment variables, passed via the server's registration (see below):
+Settings live in a JSON config file, **not** environment variables — this lets one server span multiple projects, each with multiple teams. Copy [`config.example.json`](config.example.json) to a real path and fill it in:
 
-| Variable | Required | Default | Description |
+```json
+{
+  "org_url": "https://dev.azure.com/ircost",
+  "pat": "your-personal-access-token",
+  "projects": {
+    "Allegion Mobile Products": ["Unified SDK"],
+    "IoT Services": ["Unicorns"]
+  }
+}
+```
+
+| Key | Required | Default | Description |
 |---|---|---|---|
-| `ADO_ORG_URL` | yes | — | e.g. `https://dev.azure.com/your-org` |
-| `ADO_PROJECT` | yes | — | Project name |
-| `ADO_TEAM` | yes | — | Team name (used for current-sprint lookup) |
-| `ADO_PAT` | yes | — | Personal Access Token — needs Work Items (Read & Write) scope |
-| `ADO_PBI_TYPES` | no | `Product Backlog Item,Bug,Tech Debt Item,Spike,SSRD` | Comma-separated work item type names to include when listing "my" sprint items |
-| `ADO_TASK_TYPE` | no | `Task` | Work item type name for child tasks |
-| `ADO_ACCEPTANCE_CRITERIA_FIELD` | no | `Microsoft.VSTS.Common.AcceptanceCriteria` | Field reference name for acceptance criteria |
-| `ADO_EFFORT_FIELD` | no | `Microsoft.VSTS.Scheduling.Effort` | Field reference name for PBI effort |
-| `ADO_TASK_EFFORT_FIELD` | no | `Microsoft.VSTS.Scheduling.OriginalEstimate` | Field reference name for task effort |
+| `org_url` | yes | — | e.g. `https://dev.azure.com/your-org` |
+| `pat` | yes | — | Personal Access Token — needs Work Items (Read & Write) scope |
+| `projects` | yes | — | Object mapping project name → list of team names. Every project/team pair is considered when listing work items or current sprints |
+| `work_item_types` | no | `["Product Backlog Item", "Bug", "Tech Debt Item", "Spike", "SSRD"]` | Work item type names to include when listing "my" sprint items |
+| `task_type` | no | `"Task"` | Work item type name for child tasks |
+| `acceptance_criteria_field` | no | `"Microsoft.VSTS.Common.AcceptanceCriteria"` | Field reference name for acceptance criteria |
+| `effort_field` | no | `"Microsoft.VSTS.Scheduling.Effort"` | Field reference name for work item effort |
+| `task_effort_field` | no | `"Microsoft.VSTS.Scheduling.OriginalEstimate"` | Field reference name for task effort |
+
+The server reads this file from `~/.config/ado_work_item_mcp/config.json` by default, or from the path in `ADO_WORK_ITEM_MCP_CONFIG` if set. The file contains your PAT in plaintext — keep it out of version control (`config.json` is already gitignored in this repo) and restrict its permissions, e.g. `chmod 600 config.json`.
 
 ### Registering the server
 
@@ -73,19 +85,11 @@ This server is meant to be usable from *any* Claude Code session, in any directo
 
 ```bash
 claude mcp add ado_work_item_mcp --scope user \
-  -e ADO_ORG_URL="https://dev.azure.com/your-org" \
-  -e ADO_PROJECT="your-project" \
-  -e ADO_TEAM="your-team" \
-  -e ADO_PAT="your-personal-access-token" \
+  -e ADO_WORK_ITEM_MCP_CONFIG="/path/to/your/config.json" \
   -- /path/to/ado_work_item_mcp/.venv/bin/python -m ado_work_item_mcp.server
 ```
 
-##### Example configuration
-| Variable | Example |
-|---|---|
-| `ADO_ORG_URL` | `https://dev.azure.com/ircost` |
-| `ADO_PROJECT` | `Allegion Mobile Products` |
-| `ADO_TEAM` | `Unified SDK` |
+Omit the `-e ADO_WORK_ITEM_MCP_CONFIG=...` flag if you put your config at the default location (`~/.config/ado_work_item_mcp/config.json`).
 
 Restart Claude Code afterwards so the new session picks up the registration. Run `claude mcp list` to confirm it's registered, and `claude mcp remove ado_work_item_mcp` to undo.
 
@@ -107,7 +111,7 @@ mcp dev src/ado_work_item_mcp/server.py
 commands/
 └── implement_work_item.md   # example Claude Code slash command
 src/ado_work_item_mcp/
-├── config.py   # env var loading
+├── config.py   # config.json loading
 ├── client.py   # azure-devops SDK calls
 └── server.py   # MCP tool definitions (FastMCP)
 ```
