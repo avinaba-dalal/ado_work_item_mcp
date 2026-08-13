@@ -80,6 +80,13 @@ claude mcp add ado_work_item_mcp --scope user \
   -- /path/to/ado_work_item_mcp/.venv/bin/python -m ado_work_item_mcp.server
 ```
 
+##### Example configuration
+| Variable | Example |
+|---|---|
+| `ADO_ORG_URL` | `https://dev.azure.com/ircost` |
+| `ADO_PROJECT` | `Allegion Mobile Products` |
+| `ADO_TEAM` | `Unified SDK` |
+
 Restart Claude Code afterwards so the new session picks up the registration. Run `claude mcp list` to confirm it's registered, and `claude mcp remove ado_work_item_mcp` to undo.
 
 ### Example workflow command
