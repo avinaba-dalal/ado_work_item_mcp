@@ -43,6 +43,14 @@ source .venv/bin/activate
 pip install -e .
 ```
 
+Or (if above fails)
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip3 install -e .
+```
+
 ## Configuration
 
 All settings are environment variables, passed via the server's registration (see below):
