@@ -28,8 +28,8 @@ MCP Client (Claude Code)
 | `set_work_item_state(work_item_id, state)` | Change a work item's state |
 | `add_work_item_comment(work_item_id, text)` | Add a comment to a work item |
 | `attach_plan(work_item_id, content, filename?)` | Attach a markdown plan (default `PLAN.md`) to a work item |
-| `create_task(work_item_id, title, description?, effort?)` | Create a child task under a work item |
-| `update_task(task_id, title?, description?, state?, effort?)` | Update a task's fields |
+| `create_task(work_item_id, title, description?, effort?, assigned_to?)` | Create a child task under a work item. `assigned_to` defaults to the PAT owner if omitted |
+| `update_task(task_id, title?, description?, state?, effort?, assigned_to?)` | Update a task's fields |
 | `delete_task(task_id)` | Soft-delete a task (recycle bin) |
 | `list_tasks(work_item_id)` | List a work item's child tasks: id, title, state |
 

@@ -16,6 +16,9 @@ _connection = Connection(
 )
 _wit_client = _connection.clients.get_work_item_tracking_client()
 _work_client = _connection.clients.get_work_client()
+_location_client = _connection.clients.get_location_client()
+
+_current_user_cache: str | None = None
 
 HIERARCHY_FORWARD = "System.LinkTypes.Hierarchy-Forward"
 HIERARCHY_REVERSE = "System.LinkTypes.Hierarchy-Reverse"
@@ -34,9 +37,30 @@ def _work_item_url(work_item_id: int) -> str:
     return f"{config.ORG_URL}/_apis/wit/workItems/{work_item_id}"
 
 
-def _project_of(work_item_id: int) -> str:
-    item = _wit_client.get_work_item(work_item_id, fields=["System.TeamProject"])
-    return item.fields["System.TeamProject"]
+def _current_user_identity() -> str:
+    global _current_user_cache
+    if _current_user_cache is None:
+        data = _location_client.get_connection_data()
+        user = data.authenticated_user
+        account = None
+        if user and user.properties:
+            account = (user.properties.get("Account") or {}).get("$value")
+        _current_user_cache = account or (user.provider_display_name if user else None)
+        if not _current_user_cache:
+            raise RuntimeError("Could not determine the current user's identity from the PAT.")
+    return _current_user_cache
+
+
+def _work_item_context(work_item_id: int) -> dict:
+    item = _wit_client.get_work_item(
+        work_item_id,
+        fields=["System.TeamProject", "System.IterationPath", "System.AreaPath"],
+    )
+    return {
+        "project": item.fields["System.TeamProject"],
+        "iteration_path": item.fields.get("System.IterationPath"),
+        "area_path": item.fields.get("System.AreaPath"),
+    }
 
 
 def get_current_sprint(project: str, team: str) -> dict:
@@ -174,7 +198,7 @@ def set_work_item_state(work_item_id: int, state: str) -> dict:
 
 
 def add_work_item_comment(work_item_id: int, text: str) -> dict:
-    project = _project_of(work_item_id)
+    project = _work_item_context(work_item_id)["project"]
     request = CommentCreate(text=text)
     comment = _wit_client.add_comment(request, project, work_item_id)
     return {"id": comment.id, "text": comment.text}
@@ -198,10 +222,21 @@ def attach_plan(work_item_id: int, content: str, filename: str = "PLAN.md") -> d
     return {"id": attachment.id, "url": attachment.url, "filename": filename}
 
 
+def _assigned_to(fields: dict) -> str | None:
+    value = fields.get("System.AssignedTo")
+    if isinstance(value, dict):
+        return value.get("displayName") or value.get("uniqueName")
+    return value
+
+
 def create_task(
-    work_item_id: int, title: str, description: str = "", effort: float | None = None
+    work_item_id: int,
+    title: str,
+    description: str = "",
+    effort: float | None = None,
+    assigned_to: str | None = None,
 ) -> dict:
-    project = _project_of(work_item_id)
+    parent = _work_item_context(work_item_id)
     document = [
         _patch("add", "/fields/System.Title", title),
         _patch(
@@ -210,15 +245,23 @@ def create_task(
             {"rel": HIERARCHY_REVERSE, "url": _work_item_url(work_item_id)},
         ),
     ]
+    if parent["iteration_path"]:
+        document.append(_patch("add", "/fields/System.IterationPath", parent["iteration_path"]))
+    if parent["area_path"]:
+        document.append(_patch("add", "/fields/System.AreaPath", parent["area_path"]))
     if description:
         document.append(_patch("add", "/fields/System.Description", description))
     if effort is not None:
         document.append(_patch("add", f"/fields/{config.TASK_EFFORT_FIELD}", effort))
-    item = _wit_client.create_work_item(document, project=project, type=config.TASK_TYPE)
+    document.append(
+        _patch("add", "/fields/System.AssignedTo", assigned_to or _current_user_identity())
+    )
+    item = _wit_client.create_work_item(document, project=parent["project"], type=config.TASK_TYPE)
     return {
         "id": item.id,
         "title": item.fields.get("System.Title"),
         "state": item.fields.get("System.State"),
+        "assigned_to": _assigned_to(item.fields),
     }
 
 
@@ -228,6 +271,7 @@ def update_task(
     description: str | None = None,
     state: str | None = None,
     effort: float | None = None,
+    assigned_to: str | None = None,
 ) -> dict:
     document = []
     if title is not None:
@@ -238,15 +282,18 @@ def update_task(
         document.append(_patch("add", "/fields/System.State", state))
     if effort is not None:
         document.append(_patch("add", f"/fields/{config.TASK_EFFORT_FIELD}", effort))
+    if assigned_to is not None:
+        document.append(_patch("add", "/fields/System.AssignedTo", assigned_to))
     if not document:
         raise ValueError(
-            "update_task requires at least one of title/description/state/effort"
+            "update_task requires at least one of title/description/state/effort/assigned_to"
         )
     item = _wit_client.update_work_item(document, task_id)
     return {
         "id": item.id,
         "title": item.fields.get("System.Title"),
         "state": item.fields.get("System.State"),
+        "assigned_to": _assigned_to(item.fields),
     }
 
 

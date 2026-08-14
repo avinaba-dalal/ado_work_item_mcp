@@ -53,10 +53,19 @@ def attach_plan(work_item_id: int, content: str, filename: str = "PLAN.md") -> d
 
 @mcp.tool()
 def create_task(
-    work_item_id: int, title: str, description: str = "", effort: float | None = None
+    work_item_id: int,
+    title: str,
+    description: str = "",
+    effort: float | None = None,
+    assigned_to: str | None = None,
 ) -> dict:
-    """Create a new child task under a work item. `effort` is a human-estimate (e.g. hours)."""
-    return client.create_task(work_item_id, title, description, effort=effort)
+    """Create a new child task under a work item. `effort` is a human-estimate (e.g. hours).
+
+    `assigned_to` is the owner's email or display name — omit to assign it to
+    whoever the server's PAT belongs to (you)."""
+    return client.create_task(
+        work_item_id, title, description, effort=effort, assigned_to=assigned_to
+    )
 
 
 @mcp.tool()
@@ -66,10 +75,16 @@ def update_task(
     description: str | None = None,
     state: str | None = None,
     effort: float | None = None,
+    assigned_to: str | None = None,
 ) -> dict:
-    """Update a task's title, description, state, and/or effort. Only provided fields are changed."""
+    """Update a task's title, description, state, effort, and/or owner. Only provided fields are changed."""
     return client.update_task(
-        task_id, title=title, description=description, state=state, effort=effort
+        task_id,
+        title=title,
+        description=description,
+        state=state,
+        effort=effort,
+        assigned_to=assigned_to,
     )
 
 
