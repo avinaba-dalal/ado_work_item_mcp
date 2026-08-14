@@ -38,6 +38,24 @@ This `attach_plan` call is the **only** write action you are allowed to perform 
 
 You have a free hand on implementation approach. As you work:
 
-- Create child tasks under the work item as you see fit (`create_task`), each with a `title`, `description`, and `effort` (a human-style estimate for that task, as if a person had sized it).
+- Create child tasks under the work item as you see fit (`create_task`), each with a `title`, `description`, and `effort` (a human-style estimate for that task, as if a person had sized it). Task `description` fields support markdown — format them with it (headings, lists, code spans, etc.) rather than as flat prose.
 - Keep task `state` current as you progress: `New` → `In Progress` → `Done`. Update tasks (`update_task`) as work moves along rather than only at the end.
 - Do not touch the work item's own state or comments — only its child tasks change during implementation.
+
+## 6. Verification
+Once implementation is done, you must verify the implementation. This can be done by executing unit tests or instrumentation tests or any way that you see fit. Before you start the verification, you must create a child task under the work item (`create_task`), by populating `title`, `description` (where you detail how the verification is done) and `effort`. You may then proceed with the verification and propagate the task accordingly.
+
+## 7. User Review
+After the implementation and verification is done, you must report it to user and ask them to review it. Once they confirm, you proceed to the next step. Otherwise, the user may ask queries or suggest changes that you must consider. You may only proceed to the next step after user confirmation (and must ask about the confirmation to the user explicitly).
+
+## 8. Pull Request Creation
+Once the user approves the changes, you must do the following:
+
+- Check if the git repo points to a GitHub Remote. If yes, proceed with PR creation, else tell the user that PRs can only be raised to Github and stop.
+- Commit the changes with a suitable commit message.
+- Create 2 child tasks under the work item (`create_task`), one with `title` as "Raise PR to feature branch" and other with `title` as "Merge PR to feature branch". As `description` you can mention the associated branches. `effort` should be 1.
+- Check if `gh` (github CLI) is accessible.
+- Prepare a PR from the working branch to the branch the working branch was branched off from.
+- Include `AB#<work-item-id>` somewhere in the PR title or description — this is Azure Boards' GitHub linking convention and auto-links the PR back to this work item once the connection processes the webhook (works even if added by editing an already-open PR, not just at creation).
+- Consider any pull request templates present in the repo. If you find a template, you must fill the body as per the template.
+- Show user about the PR details and ask confirmation, once confirmed, raise the PR else stop.
