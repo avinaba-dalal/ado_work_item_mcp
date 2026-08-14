@@ -95,7 +95,17 @@ Restart Claude Code afterwards so the new session picks up the registration. Run
 
 ### Example workflow command
 
-[`commands/implement_work_item.md`](commands/implement_work_item.md) is a starting-point Claude Code slash command that drives a full work-item implementation using these tools (grooming/state checks, plan-approval gate, branch creation, task-tracked implementation). Copy it to `~/.claude/commands/` to use it as `/implement_work_item <work-item-id>`, adjusting the branch naming convention to your own.
+[`commands/implement_work_item.md`](commands/implement_work_item.md) is a starting-point Claude Code slash command that drives a full work-item implementation end-to-end using these tools. Copy it to `~/.claude/commands/` to use it as `/implement_work_item <work-item-id>`, adjusting the branch naming convention to your own. It walks through:
+
+1. **Repo context check** — confirms it's running in the right local repo for this work item, asking if unclear.
+2. **Initial checks** — reads the work item and requires `state` to be `Approved`/`Committed` and `effort` to be set (groomed), stopping or asking permission otherwise.
+3. **Branch** — creates a new branch off a user-chosen base branch.
+4. **Plan** — drafts an implementation plan and gets explicit user approval before any writes.
+5. **Attach the plan** — scrubs it of local paths/secrets and attaches it to the work item as `PLAN.md` (the only write ever made to the work item itself — no state or comment changes).
+6. **Implement** — does the work, creating/updating child tasks (`create_task`/`update_task`) as it goes, each with a markdown-formatted `description` and an `effort` estimate, keeping task state current (`New` → `In Progress` → `Done`).
+7. **Verification** — runs tests (or another suitable check), tracked as its own child task.
+8. **User review** — reports the finished implementation and verification, and waits for explicit user confirmation before proceeding.
+9. **Pull request** — commits, creates "Raise PR"/"Merge PR" child tasks, opens a PR via `gh` (following any repo PR template) including `AB#<work-item-id>` in the title/description so Azure Boards auto-links it, and confirms with the user before actually raising it.
 
 ## Manual testing
 
