@@ -251,6 +251,7 @@ def create_task(
         document.append(_patch("add", "/fields/System.AreaPath", parent["area_path"]))
     if description:
         document.append(_patch("add", "/fields/System.Description", description))
+        document.append(_patch("add", "/multilineFieldsFormat/System.Description", "Markdown"))
     if effort is not None:
         document.append(_patch("add", f"/fields/{config.TASK_EFFORT_FIELD}", effort))
     document.append(
@@ -278,6 +279,7 @@ def update_task(
         document.append(_patch("add", "/fields/System.Title", title))
     if description is not None:
         document.append(_patch("add", "/fields/System.Description", description))
+        document.append(_patch("add", "/multilineFieldsFormat/System.Description", "Markdown"))
     if state is not None:
         document.append(_patch("add", "/fields/System.State", state))
     if effort is not None:
