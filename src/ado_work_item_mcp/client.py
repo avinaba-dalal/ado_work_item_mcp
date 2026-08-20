@@ -132,7 +132,13 @@ def list_my_work_items(iteration_paths: list[str] | None = None) -> list[dict]:
         return []
     items = _wit_client.get_work_items(
         ids,
-        fields=["System.Title", "System.State", "System.WorkItemType", "System.TeamProject"],
+        fields=[
+            "System.Title",
+            "System.State",
+            "System.WorkItemType",
+            "System.TeamProject",
+            "System.IterationPath",
+        ],
     )
     return [
         {
@@ -141,9 +147,28 @@ def list_my_work_items(iteration_paths: list[str] | None = None) -> list[dict]:
             "state": item.fields.get("System.State"),
             "type": item.fields.get("System.WorkItemType"),
             "project": item.fields.get("System.TeamProject"),
+            "iteration_path": (item.fields.get("System.IterationPath") or "").lstrip("\\") or None,
         }
         for item in items
     ]
+
+
+def get_iteration_finish_dates() -> dict[str, object]:
+    """Map every configured project/team's iteration path -> finish_date (datetime or None),
+    across all iterations (past, current, future) - not just the current sprint."""
+    dates: dict[str, object] = {}
+    for project, teams in config.PROJECTS.items():
+        for team in teams:
+            team_context = TeamContext(project=project, team=team)
+            try:
+                iterations = _work_client.get_team_iterations(team_context)
+            except Exception:
+                continue
+            for iteration in iterations:
+                path = iteration.path.lstrip("\\")
+                finish = iteration.attributes.finish_date if iteration.attributes else None
+                dates[path] = finish
+    return dates
 
 
 def _child_task_ids(work_item_id: int) -> list[int]:
