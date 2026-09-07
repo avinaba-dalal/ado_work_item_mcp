@@ -37,7 +37,7 @@ MCP Client (Claude Code)
 
 ### Homebrew (macOS, Apple Silicon)
 
-Both the tap and this repo are private, so you'll need an authenticated `gh` CLI session (`gh auth login`) with access to this repo — the formula shells out to `gh release download` to fetch the release asset, since anonymous downloads of private-repo release assets 404.
+The tap is private (this repo itself is public), so `brew tap` needs GitHub access to this account:
 
 ```bash
 brew tap avinaba-dalal/ado-work-item-mcp git@github.com:avinaba-dalal/homebrew-ado-work-item-mcp.git
@@ -47,7 +47,7 @@ brew install ado-work-item-mcp
 
 (The explicit SSH URL on `brew tap` is only needed if you don't have an HTTPS credential helper configured for GitHub. `brew trust` is required once per machine since this is a third-party tap.)
 
-This installs a self-contained `ado_work_item_mcp` binary — no Python/venv setup needed.
+This installs a self-contained `ado_work_item_mcp` binary — no Python/venv setup needed — and also drops the [`implement_work_item`](commands/implement_work_item.md) slash command into `~/.claude/commands/`.
 
 ### From source
 
@@ -69,10 +69,16 @@ pip3 install -e .
 
 ## Configuration
 
-The easiest way to get set up is the interactive setup command, which checks prerequisites (`claude`/`gh` CLIs on `PATH`) and writes `config.json` for you:
+`ado_work_item_mcp setup` (no extra args) runs a read-only preflight check: whether the `claude`/`gh` CLIs are on `PATH`, whether this server is registered with Claude Code and currently connected, whether `config.json` exists, and whether the `implement_work_item` skill is installed. Run it any time to diagnose a broken setup:
 
 ```bash
 ado_work_item_mcp setup
+```
+
+To actually write `config.json`, run the interactive wizard instead:
+
+```bash
+ado_work_item_mcp setup config
 ```
 
 It prompts for your org URL, PAT, and project/team pairs, writes the result to `~/.config/ado_work_item_mcp/config.json` (or the path in `ADO_WORK_ITEM_MCP_CONFIG` if set) with `chmod 600` permissions, and prints the `claude mcp add` command to register the server. Re-run it any time to reset your config — it asks before overwriting an existing one.
@@ -129,7 +135,7 @@ Restart Claude Code afterwards so the new session picks up the registration. Run
 
 ### Example workflow command
 
-[`commands/implement_work_item.md`](commands/implement_work_item.md) is a starting-point Claude Code slash command that drives a full work-item implementation end-to-end using these tools. Copy it to `~/.claude/commands/` to use it as `/implement_work_item <work-item-id>`, adjusting the branch naming convention to your own. It walks through:
+[`commands/implement_work_item.md`](commands/implement_work_item.md) is a starting-point Claude Code slash command that drives a full work-item implementation end-to-end using these tools. The Homebrew install places it in `~/.claude/commands/` automatically; from a source install, copy it there yourself. Use it as `/implement_work_item <work-item-id>`, adjusting the branch naming convention to your own. It walks through:
 
 1. **Repo context check** — confirms it's running in the right local repo for this work item, asking if unclear.
 2. **Initial checks** — reads the work item and requires `state` to be `Approved`/`Committed` and `effort` to be set (groomed), stopping or asking permission otherwise.

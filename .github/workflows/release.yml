@@ -35,7 +35,10 @@ jobs:
       - name: Package artifact
         id: package
         run: |
-          tar -C dist -czf ado_work_item_mcp-macos-arm64.tar.gz ado_work_item_mcp
+          mkdir -p pkg
+          cp dist/ado_work_item_mcp pkg/
+          cp commands/implement_work_item.md pkg/
+          tar -C pkg -czf ado_work_item_mcp-macos-arm64.tar.gz ado_work_item_mcp implement_work_item.md
           shasum -a 256 ado_work_item_mcp-macos-arm64.tar.gz | tee sha256.txt
 
       - name: Create release

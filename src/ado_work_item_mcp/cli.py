@@ -3,9 +3,14 @@ import sys
 
 def main():
     if len(sys.argv) > 1 and sys.argv[1] == "setup":
-        from ado_work_item_mcp.setup import run_setup
+        if len(sys.argv) > 2 and sys.argv[2] == "config":
+            from ado_work_item_mcp.setup import run_setup
 
-        run_setup()
+            run_setup()
+        else:
+            from ado_work_item_mcp.setup import run_preflight
+
+            run_preflight()
         return
 
     from ado_work_item_mcp.server import main as server_main

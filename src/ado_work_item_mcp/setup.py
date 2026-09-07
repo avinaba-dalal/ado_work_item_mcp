@@ -3,10 +3,13 @@ import json
 import os
 import shutil
 import stat
+import subprocess
 import sys
 from pathlib import Path
 
 DEFAULT_CONFIG_PATH = Path.home() / ".config" / "ado_work_item_mcp" / "config.json"
+SKILL_PATH = Path.home() / ".claude" / "commands" / "implement_work_item.md"
+MCP_SERVER_NAME = "ado_work_item_mcp"
 
 
 def _config_path() -> Path:
@@ -14,13 +17,41 @@ def _config_path() -> Path:
     return Path(env_path) if env_path else DEFAULT_CONFIG_PATH
 
 
-def _preflight() -> None:
+def _mcp_server_status(claude_path: str) -> str:
+    try:
+        result = subprocess.run(
+            [claude_path, "mcp", "list"], capture_output=True, text=True, timeout=15
+        )
+    except (subprocess.SubprocessError, OSError) as e:
+        return f"could not check ({e})"
+
+    for line in result.stdout.splitlines():
+        line = line.strip()
+        if line.startswith(f"{MCP_SERVER_NAME}:"):
+            return line.split(" - ", 1)[-1].strip() if " - " in line else line
+    return "not registered (run `claude mcp add`, see README)"
+
+
+def run_preflight() -> None:
     print("Checking prerequisites...")
+
     claude_path = shutil.which("claude")
-    print(f"  claude CLI: {'found at ' + claude_path if claude_path else 'NOT FOUND (needed to register this server)'}")
+    print(f"  claude CLI:   {'found at ' + claude_path if claude_path else 'NOT FOUND (needed to register this server)'}")
+
     gh_path = shutil.which("gh")
-    print(f"  gh CLI:     {'found at ' + gh_path if gh_path else 'not found (only needed for the implement_work_item PR step)'}")
-    print()
+    print(f"  gh CLI:       {'found at ' + gh_path if gh_path else 'not found (only needed for the implement_work_item PR step)'}")
+
+    if claude_path:
+        print(f"  MCP server:   {_mcp_server_status(claude_path)}")
+    else:
+        print("  MCP server:   skipped (claude CLI not found)")
+
+    skill_found = SKILL_PATH.exists()
+    print(f"  implement_work_item skill: {'found at ' + str(SKILL_PATH) if skill_found else 'NOT FOUND at ' + str(SKILL_PATH)}")
+
+    config_path = _config_path()
+    config_found = config_path.exists()
+    print(f"  config.json:  {'found at ' + str(config_path) if config_found else 'NOT FOUND - run `ado_work_item_mcp setup config`'}")
 
 
 def _prompt_projects() -> dict[str, list[str]]:
@@ -40,8 +71,6 @@ def _prompt_projects() -> dict[str, list[str]]:
 
 
 def run_setup() -> None:
-    _preflight()
-
     path = _config_path()
     if path.exists():
         answer = input(f"Config already exists at {path}. Overwrite? [y/N] ").strip().lower()
