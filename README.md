@@ -69,19 +69,19 @@ pip3 install -e .
 
 ## Configuration
 
-`ado_work_item_mcp setup` (no extra args) runs a read-only preflight check: whether the `claude`/`gh` CLIs are on `PATH`, whether this server is registered with Claude Code and currently connected, whether `config.json` exists, and whether the `implement_work_item` skill is installed. Run it any time to diagnose a broken setup:
+Run this once after installing:
 
 ```bash
 ado_work_item_mcp setup
 ```
 
-To actually write `config.json`, run the interactive wizard instead:
+It does three things in order:
 
-```bash
-ado_work_item_mcp setup config
-```
+1. **Preflight** — checks whether the `claude`/`gh` CLIs are on `PATH`, whether this server is already registered with Claude Code and connected, whether `config.json` exists, and whether the `implement_work_item` skill is installed. The `claude` CLI is the one hard requirement here — setup aborts without it, since it's needed to register the server; everything else is advisory.
+2. **Config wizard** — prompts for your org URL, PAT, and project/team pairs, and writes the result to `~/.config/ado_work_item_mcp/config.json` (or the path in `ADO_WORK_ITEM_MCP_CONFIG` if set) with `chmod 600` permissions. Asks before overwriting an existing config.
+3. **Registration** — runs `claude mcp add` for you (skipped if already registered).
 
-It prompts for your org URL, PAT, and project/team pairs, writes the result to `~/.config/ado_work_item_mcp/config.json` (or the path in `ADO_WORK_ITEM_MCP_CONFIG` if set) with `chmod 600` permissions, and prints the `claude mcp add` command to register the server. Re-run it any time to reset your config — it asks before overwriting an existing one.
+Running `ado_work_item_mcp` on its own (no subcommand, from a terminal) just prints the preflight check — useful for diagnosing a broken setup without touching anything. When Claude Code itself launches the binary (as configured by `setup`/`claude mcp add`), it runs the actual MCP server instead.
 
 Settings live in a JSON config file, **not** environment variables — this lets one server span multiple projects, each with multiple teams. If you'd rather write it by hand, copy [`config.example.json`](config.example.json) to a real path and fill it in:
 
@@ -111,7 +111,7 @@ The server reads this file from `~/.config/ado_work_item_mcp/config.json` by def
 
 ### Registering the server
 
-This server is meant to be usable from *any* Claude Code session, in any directory — not just when working inside this repo. Register it once, globally, via the CLI (`--scope user`), which stores the registration in `~/.claude.json` and makes the tools available regardless of which directory a Claude Code session is rooted in.
+This server is meant to be usable from *any* Claude Code session, in any directory — not just when working inside this repo. `ado_work_item_mcp setup` (above) registers it globally for you (`--scope user`, which stores the registration in `~/.claude.json`), so this section is only needed if you skipped `setup` or want to register it by hand.
 
 If installed via Homebrew, the binary is already on `PATH`:
 
