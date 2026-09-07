@@ -35,6 +35,17 @@ MCP Client (Claude Code)
 
 ## Installation
 
+### Homebrew (macOS, Apple Silicon)
+
+```bash
+brew tap avinaba-dalal/ado-work-item-mcp
+brew install ado-work-item-mcp
+```
+
+This installs a self-contained `ado_work_item_mcp` binary — no Python/venv setup needed. It's a private tap, so `brew tap` needs GitHub access to this account (SSH/HTTPS auth already used for git will work).
+
+### From source
+
 Requires Python 3.10+.
 
 ```bash
@@ -53,7 +64,15 @@ pip3 install -e .
 
 ## Configuration
 
-Settings live in a JSON config file, **not** environment variables — this lets one server span multiple projects, each with multiple teams. Copy [`config.example.json`](config.example.json) to a real path and fill it in:
+The easiest way to get set up is the interactive setup command, which checks prerequisites (`claude`/`gh` CLIs on `PATH`) and writes `config.json` for you:
+
+```bash
+ado_work_item_mcp setup
+```
+
+It prompts for your org URL, PAT, and project/team pairs, writes the result to `~/.config/ado_work_item_mcp/config.json` (or the path in `ADO_WORK_ITEM_MCP_CONFIG` if set) with `chmod 600` permissions, and prints the `claude mcp add` command to register the server. Re-run it any time to reset your config — it asks before overwriting an existing one.
+
+Settings live in a JSON config file, **not** environment variables — this lets one server span multiple projects, each with multiple teams. If you'd rather write it by hand, copy [`config.example.json`](config.example.json) to a real path and fill it in:
 
 ```json
 {
@@ -81,7 +100,17 @@ The server reads this file from `~/.config/ado_work_item_mcp/config.json` by def
 
 ### Registering the server
 
-This server is meant to be usable from *any* Claude Code session, in any directory — not just when working inside this repo. Register it once, globally, via the CLI (`--scope user`), which stores the registration in `~/.claude.json` and makes the tools available regardless of which directory a Claude Code session is rooted in:
+This server is meant to be usable from *any* Claude Code session, in any directory — not just when working inside this repo. Register it once, globally, via the CLI (`--scope user`), which stores the registration in `~/.claude.json` and makes the tools available regardless of which directory a Claude Code session is rooted in.
+
+If installed via Homebrew, the binary is already on `PATH`:
+
+```bash
+claude mcp add ado_work_item_mcp --scope user \
+  -e ADO_WORK_ITEM_MCP_CONFIG="/path/to/your/config.json" \
+  -- ado_work_item_mcp
+```
+
+If installed from source, point at the venv's interpreter instead:
 
 ```bash
 claude mcp add ado_work_item_mcp --scope user \

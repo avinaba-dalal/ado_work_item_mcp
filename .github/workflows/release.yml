@@ -1,0 +1,57 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install project and build tooling
+        run: |
+          python -m pip install --upgrade pip
+          pip install .
+          pip install pyinstaller
+
+      - name: Build standalone binary
+        run: |
+          pyinstaller --onefile --name ado_work_item_mcp \
+            --collect-all azure.devops \
+            --collect-all msrest \
+            --collect-all mcp \
+            scripts/pyinstaller_entry.py
+
+      - name: Package artifact
+        id: package
+        run: |
+          tar -C dist -czf ado_work_item_mcp-macos-arm64.tar.gz ado_work_item_mcp
+          shasum -a 256 ado_work_item_mcp-macos-arm64.tar.gz | tee sha256.txt
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            ado_work_item_mcp-macos-arm64.tar.gz \
+            --title "${{ github.ref_name }}" \
+            --generate-notes
+
+      - name: Write formula details to job summary
+        run: |
+          {
+            echo "### Homebrew formula fields for \`${{ github.ref_name }}\`"
+            echo ""
+            echo "\`\`\`"
+            echo "url \"https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/ado_work_item_mcp-macos-arm64.tar.gz\""
+            echo "sha256 \"$(cut -d' ' -f1 sha256.txt)\""
+            echo "version \"${{ github.ref_name }}\""
+            echo "\`\`\`"
+          } >> "$GITHUB_STEP_SUMMARY"

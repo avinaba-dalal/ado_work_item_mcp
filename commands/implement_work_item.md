@@ -18,15 +18,19 @@ Call `get_work_item(work_item_id)` and evaluate, in order:
 
 Only move to step 2 once both checks pass (or the user explicitly overrides the grooming warning).
 
-## 2. Branch
+## 2. Repo conventions (read-only)
+
+Look up this repo's captured coding conventions before drafting anything, using the `notes-rag` MCP tools: call `search_notes` with the repo's `owner/repo` name (fall back to `list_notes` if search comes up empty), matching the `<owner>/<repo> conventions` title convention used elsewhere. If a note is found, read it — treat its contents as binding style/structure preferences for this repo and apply them in steps 4 and 6 below. If none exists yet, proceed without it; there's nothing to apply.
+
+## 3. Branch
 
 Ask the user which base branch to create the new branch from — unless they already told you in their request. Ask for (or use an already-established) branch naming convention, e.g. a prefix such as `<your-prefix>/<short-descriptive-name>`, off the chosen base branch.
 
-## 3. Draft a plan (no writes yet)
+## 4. Draft a plan (no writes yet)
 
-Draft an implementation plan for the work item and present it to the user for review. **Do not write any code or attach anything until the user approves this plan.** Iterate on it based on their feedback.
+Draft an implementation plan for the work item, applying any repo conventions found in step 2, and present it to the user for review. **Do not write any code or attach anything until the user approves this plan.** Iterate on it based on their feedback.
 
-## 4. Capture and attach the plan
+## 5. Capture and attach the plan
 
 Once approved, write the plan as PLAN.md content and call `attach_plan(work_item_id, content)`.
 
@@ -34,21 +38,21 @@ Once approved, write the plan as PLAN.md content and call `attach_plan(work_item
 
 This `attach_plan` call is the **only** write action you are allowed to perform on the work item itself. Do not call `set_work_item_state` or `add_work_item_comment` on this work item as part of this procedure, now or later in the flow.
 
-## 5. Implement
+## 6. Implement
 
-You have a free hand on implementation approach. As you work:
+You have a free hand on implementation approach, but follow the repo conventions captured in step 2 throughout, in addition to whatever patterns already exist in the codebase. As you work:
 
 - Create child tasks under the work item as you see fit (`create_task`), each with a `title`, `description`, and `effort` (a human-style estimate for that task, as if a person had sized it). Task `description` fields support markdown — format them with it (headings, lists, code spans, etc.) rather than as flat prose.
 - Keep task `state` current as you progress: `New` → `In Progress` → `Done`. Update tasks (`update_task`) as work moves along rather than only at the end.
 - Do not touch the work item's own state or comments — only its child tasks change during implementation.
 
-## 6. Verification
+## 7. Verification
 Once implementation is done, you must verify the implementation. This can be done by executing unit tests or instrumentation tests or any way that you see fit. Before you start the verification, you must create a child task under the work item (`create_task`), by populating `title`, `description` (where you detail how the verification is done) and `effort`. You may then proceed with the verification and propagate the task accordingly.
 
-## 7. User Review
+## 8. User Review
 After the implementation and verification is done, you must report it to user and ask them to review it. Once they confirm, you proceed to the next step. Otherwise, the user may ask queries or suggest changes that you must consider. You may only proceed to the next step after user confirmation (and must ask about the confirmation to the user explicitly).
 
-## 8. Pull Request Creation
+## 9. Pull Request Creation
 Once the user approves the changes, you must do the following:
 
 - Check if the git repo points to a GitHub Remote. If yes, proceed with PR creation, else tell the user that PRs can only be raised to Github and stop.

@@ -14,7 +14,7 @@ dependencies = [
 ]
 
 [project.scripts]
-ado_work_item_mcp = "ado_work_item_mcp.server:main"
+ado_work_item_mcp = "ado_work_item_mcp.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ado_work_item_mcp"]
