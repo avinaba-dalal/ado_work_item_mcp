@@ -37,12 +37,17 @@ MCP Client (Claude Code)
 
 ### Homebrew (macOS, Apple Silicon)
 
+Both the tap and this repo are private, so you'll need an authenticated `gh` CLI session (`gh auth login`) with access to this repo — the formula shells out to `gh release download` to fetch the release asset, since anonymous downloads of private-repo release assets 404.
+
 ```bash
-brew tap avinaba-dalal/ado-work-item-mcp
+brew tap avinaba-dalal/ado-work-item-mcp git@github.com:avinaba-dalal/homebrew-ado-work-item-mcp.git
+brew trust avinaba-dalal/ado-work-item-mcp
 brew install ado-work-item-mcp
 ```
 
-This installs a self-contained `ado_work_item_mcp` binary — no Python/venv setup needed. It's a private tap, so `brew tap` needs GitHub access to this account (SSH/HTTPS auth already used for git will work).
+(The explicit SSH URL on `brew tap` is only needed if you don't have an HTTPS credential helper configured for GitHub. `brew trust` is required once per machine since this is a third-party tap.)
+
+This installs a self-contained `ado_work_item_mcp` binary — no Python/venv setup needed.
 
 ### From source
 
