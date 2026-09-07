@@ -130,7 +130,7 @@ def _register_with_claude(claude_path: str, config_path: Path) -> None:
     args = [claude_path, "mcp", "add", MCP_SERVER_NAME, "--scope", "user"]
     if config_path != DEFAULT_CONFIG_PATH:
         args += ["-e", f"ADO_WORK_ITEM_MCP_CONFIG={config_path}"]
-    args += ["--", binary]
+    args += ["--", binary, "serve"]
 
     print(f"\nRegistering with Claude Code:\n  {' '.join(args)}")
     try:

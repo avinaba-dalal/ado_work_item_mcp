@@ -8,12 +8,12 @@ def main():
         run_setup()
         return
 
-    if sys.stdin.isatty():
-        from ado_work_item_mcp.setup import run_preflight
+    if len(sys.argv) > 1 and sys.argv[1] == "serve":
+        from ado_work_item_mcp.server import main as server_main
 
-        run_preflight()
+        server_main()
         return
 
-    from ado_work_item_mcp.server import main as server_main
+    from ado_work_item_mcp.setup import run_preflight
 
-    server_main()
+    run_preflight()

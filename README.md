@@ -81,7 +81,7 @@ It does three things in order:
 2. **Config wizard** — prompts for your org URL, PAT, and project/team pairs, and writes the result to `~/.config/ado_work_item_mcp/config.json` (or the path in `ADO_WORK_ITEM_MCP_CONFIG` if set) with `chmod 600` permissions. Asks before overwriting an existing config.
 3. **Registration** — runs `claude mcp add` for you (skipped if already registered).
 
-Running `ado_work_item_mcp` on its own (no subcommand, from a terminal) just prints the preflight check — useful for diagnosing a broken setup without touching anything. When Claude Code itself launches the binary (as configured by `setup`/`claude mcp add`), it runs the actual MCP server instead.
+Running `ado_work_item_mcp` on its own (no subcommand) just prints the preflight check — useful for diagnosing a broken setup without touching anything. `ado_work_item_mcp serve` runs the actual MCP server; that's what `setup`/`claude mcp add` registers, and you shouldn't need to run it yourself.
 
 Settings live in a JSON config file, **not** environment variables — this lets one server span multiple projects, each with multiple teams. If you'd rather write it by hand, copy [`config.example.json`](config.example.json) to a real path and fill it in:
 
@@ -118,7 +118,7 @@ If installed via Homebrew, the binary is already on `PATH`:
 ```bash
 claude mcp add ado_work_item_mcp --scope user \
   -e ADO_WORK_ITEM_MCP_CONFIG="/path/to/your/config.json" \
-  -- ado_work_item_mcp
+  -- ado_work_item_mcp serve
 ```
 
 If installed from source, point at the venv's interpreter instead:
