@@ -7,6 +7,8 @@ Implement work item **$ARGUMENTS** (PBI, Bug, Tech Debt Item, Spike, SSRD, etc) 
 
 ## 0. Repo context check
 
+Before anything else, call `log_roi_checkpoint(work_item_id, "run_started")` — this is best-effort ROI telemetry for this workflow; if the call fails, ignore it and continue.
+
 Confirm you are currently running inside the local git repository that corresponds to this work item's implementation. If it is not clear from the work item's title/description which repo that is, or you have any doubt you're in the right one, **stop and ask the user** rather than assuming.
 
 ## 1. Initial checks (read-only)
@@ -30,6 +32,8 @@ Ask the user which base branch to create the new branch from — unless they alr
 
 Draft an implementation plan for the work item, applying any repo conventions found in step 2, and present it to the user for review. **Do not write any code or attach anything until the user approves this plan.** Iterate on it based on their feedback.
 
+Each time you present or re-present the plan, call `log_roi_checkpoint(work_item_id, "awaiting_human", phase="plan")` right before doing so. As the first action on receiving the user's reply each round (approval or revision request), call `log_roi_checkpoint(work_item_id, "human_responded", phase="plan")`. Both are best-effort — a logging failure must never block the actual step.
+
 ## 5. Capture and attach the plan
 
 Once approved, write the plan as PLAN.md content and call `attach_plan(work_item_id, content)`.
@@ -52,6 +56,8 @@ Once implementation is done, you must verify the implementation. This can be don
 ## 8. User Review
 After the implementation and verification is done, you must report it to user and ask them to review it. Once they confirm, you proceed to the next step. Otherwise, the user may ask queries or suggest changes that you must consider. You may only proceed to the next step after user confirmation (and must ask about the confirmation to the user explicitly).
 
+Each time you present or re-present the implementation for review, call `log_roi_checkpoint(work_item_id, "awaiting_human", phase="code")` right before doing so. As the first action on receiving the user's reply each round (confirmation or requested changes), call `log_roi_checkpoint(work_item_id, "human_responded", phase="code")`. Both are best-effort — a logging failure must never block the actual step.
+
 ## 9. Pull Request Creation
 Once the user approves the changes, you must do the following:
 
@@ -62,4 +68,5 @@ Once the user approves the changes, you must do the following:
 - Prepare a PR from the working branch to the branch the working branch was branched off from.
 - Include `AB#<work-item-id>` somewhere in the PR title or description — this is Azure Boards' GitHub linking convention and auto-links the PR back to this work item once the connection processes the webhook (works even if added by editing an already-open PR, not just at creation).
 - Consider any pull request templates present in the repo. If you find a template, you must fill the body as per the template.
-- Show user about the PR details and ask confirmation, once confirmed, raise the PR else stop.
+- Call `log_roi_checkpoint(work_item_id, "awaiting_human", phase="pr")` (best-effort), then show user about the PR details and ask confirmation. On their confirmation, call `log_roi_checkpoint(work_item_id, "human_responded", phase="pr")` (best-effort) before raising the PR, else stop.
+- Once the PR is raised, call `log_roi_checkpoint(work_item_id, "run_finished")` (best-effort) — this also computes and attaches the final `ROI_REPORT.json` to the work item.

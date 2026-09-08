@@ -188,13 +188,14 @@ def list_tasks(work_item_id: int) -> list[dict]:
         return []
     items = _wit_client.get_work_items(
         child_ids,
-        fields=["System.Title", "System.State", "System.WorkItemType"],
+        fields=["System.Title", "System.State", "System.WorkItemType", config.TASK_EFFORT_FIELD],
     )
     return [
         {
             "id": item.id,
             "title": item.fields.get("System.Title"),
             "state": item.fields.get("System.State"),
+            "effort": item.fields.get(config.TASK_EFFORT_FIELD),
         }
         for item in items
         if item.fields.get("System.WorkItemType") == config.TASK_TYPE

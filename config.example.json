@@ -4,5 +4,11 @@
   "projects": {
     "ProjectA": ["TeamA", "TeamB"],
     "ProjectB": ["TeamC"]
+  },
+  "checkpoint_log_path": "~/.config/ado_work_item_mcp/checkpoints.jsonl",
+  "roi_time_caps": {
+    "plan": 20,
+    "code": 30,
+    "pr": 10
   }
 }

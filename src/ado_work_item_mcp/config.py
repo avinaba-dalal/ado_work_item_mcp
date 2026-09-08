@@ -54,3 +54,13 @@ EFFORT_FIELD = _data.get("effort_field", "Microsoft.VSTS.Scheduling.Effort")
 TASK_EFFORT_FIELD = _data.get(
     "task_effort_field", "Microsoft.VSTS.Scheduling.OriginalEstimate"
 )
+
+CHECKPOINT_LOG_PATH = Path(
+    _data.get(
+        "checkpoint_log_path",
+        str(Path.home() / ".config" / "ado_work_item_mcp" / "checkpoints.jsonl"),
+    )
+).expanduser()
+ROI_TIME_CAPS: dict[str, float] = _data.get(
+    "roi_time_caps", {"plan": 20, "code": 30, "pr": 10}
+)

@@ -13,6 +13,9 @@ dependencies = [
     "msrest",
 ]
 
+[project.optional-dependencies]
+dev = ["pytest"]
+
 [project.scripts]
 ado_work_item_mcp = "ado_work_item_mcp.cli:main"
 

@@ -1,6 +1,6 @@
 from mcp.server import MCPServer
 
-from ado_work_item_mcp import client
+from ado_work_item_mcp import client, roi
 
 mcp = MCPServer("ado_work_item_mcp")
 
@@ -98,6 +98,41 @@ def delete_task(task_id: int) -> dict:
 def list_tasks(work_item_id: int) -> list[dict]:
     """List the child tasks of a work item: id, title, state."""
     return client.list_tasks(work_item_id)
+
+
+@mcp.tool()
+def log_roi_checkpoint(work_item_id: int, event: str, phase: str | None = None) -> dict:
+    """Log a timestamped ROI checkpoint for a work item's implement_work_item run.
+
+    Raises `ValueError` if `event` isn't one of run_started/awaiting_human/
+    human_responded/run_finished, or if `phase` is missing/invalid for a
+    phased event (awaiting_human/human_responded need one of plan/code/pr;
+    run_started/run_finished must not have a phase).
+
+    When `event="run_finished"`, this also computes the final ROI report and
+    attaches it to the work item as `ROI_REPORT.json` — best-effort, so a
+    failure there is reported via `report_attached`/`attach_error` in the
+    return value rather than raised.
+    """
+    return roi.append_checkpoint(work_item_id, event, phase)
+
+
+@mcp.tool()
+def get_roi_report(work_item_id: int) -> dict:
+    """Get the ROI report (time saved vs. doing it manually) for one work item.
+
+    Built from that work item's logged checkpoints and its child tasks'
+    effort estimates. Returns `complete: False` and `time_saved_minutes:
+    None` if the run hasn't logged a `run_finished` checkpoint yet."""
+    return roi.build_roi_report(work_item_id)
+
+
+@mcp.tool()
+def list_roi_reports() -> list[dict]:
+    """List ROI reports for every work item that has at least one logged checkpoint.
+
+    Returns an empty list if nothing has been logged yet."""
+    return roi.list_roi_reports()
 
 
 def main():
